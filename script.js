@@ -705,133 +705,77 @@ function initializeCheckout() {
 /* =====================================================
    19. PLACE ORDER
 ===================================================== */
+/* =====================================================
+19. PLACE ORDER (UPDATED FOR MULTIPLE ORDERS & ADMIN)
+===================================================== */
 
 function placeOrder(event) {
   event.preventDefault();
 
-  /* Check cart */
-
   if (cart.length === 0) {
     showNotification("Your cart is empty. Please add food first.");
-
     return;
   }
 
-  /* Get customer details */
-
   const customerName = document.getElementById("customerName").value.trim();
-
   const customerPhone = document.getElementById("customerPhone").value.trim();
-
   const tableNumber = document.getElementById("tableNumber").value.trim();
-
-  /* Validate name */
 
   if (customerName.length < 2) {
     showNotification("Please enter your name.");
-
     return;
   }
-
-  /* Validate phone */
 
   if (!/^[0-9]{10}$/.test(customerPhone)) {
     showNotification("Please enter a valid 10 digit phone number.");
-
     return;
   }
-
-  /* Validate table */
 
   if (!tableNumber || Number(tableNumber) < 1) {
     showNotification("Please enter a valid table number.");
-
     return;
   }
 
-  /* Calculate total */
-
   const totals = calculateCartTotal();
-
-  /* Generate Order ID */
-
   const orderId = generateOrderId();
-
-  /* Create order */
 
   const order = {
     orderId: orderId,
-
     customerName: customerName,
-
     customerPhone: customerPhone,
-
     tableNumber: tableNumber,
-
     items: [...cart],
-
     subtotal: totals.subtotal,
-
     tax: totals.tax,
-
     total: totals.total,
-
-    /*
-           IMPORTANT
-
-           Stage will stay 0.
-
-           0 = Order Placed
-           1 = Preparing
-           2 = Ready
-           3 = Served
-
-           Abhi automatic update nahi hoga.
-        */
-
     stage: 0,
-
     status: "Order Placed",
-
-    createdAt: new Date().toISOString(),
+    createdAt: new Date().toLocaleString("en-IN"),
   };
 
-  /* Save order */
+  // Saare orders ki list (foodieOrders) mein naya order add karein
+  let allOrders = JSON.parse(localStorage.getItem("foodieOrders")) || [];
+  allOrders.unshift(order); // Sabse naya order upar dikhega
+  localStorage.setItem("foodieOrders", JSON.stringify(allOrders));
 
+  // Tracking ke liye latest order bhi save rakhein
   localStorage.setItem("foodieOrder", JSON.stringify(order));
 
-  /* Clear cart */
-
   cart = [];
-
   saveCart();
-
   updateNavbarCartCount();
 
-  /* Show success modal */
-
   const modal = document.getElementById("successModal");
-
   const orderIdElement = document.getElementById("generatedOrderId");
 
   if (orderIdElement) {
     orderIdElement.textContent = orderId;
   }
-
   if (modal) {
     modal.classList.add("show");
   }
 
-  /* Reset form */
-
   event.target.reset();
-
-  /*
-       IMPORTANT:
-
-       No timer.
-       No automatic stage progression.
-    */
 }
 
 /* =====================================================
@@ -886,80 +830,53 @@ function initializeTracking() {
    22. TRACK ORDER
 ===================================================== */
 
+/* =====================================================
+22. TRACK ORDER (SYNCED WITH ADMIN UPDATES)
+===================================================== */
+
 function trackOrder() {
   const orderIdInput = document.getElementById("trackingOrderId");
-
   const tableInput = document.getElementById("trackingTable");
-
   const result = document.getElementById("trackingResult");
 
-  if (!orderIdInput || !tableInput || !result) {
-    return;
-  }
+  if (!orderIdInput || !tableInput || !result) return;
 
   const enteredOrderId = orderIdInput.value.trim().toUpperCase();
-
   const enteredTable = tableInput.value.trim();
-
-  // Dono me se kam se kam ek required hai
 
   if (!enteredOrderId && !enteredTable) {
     showNotification("Order ID ya Table Number enter karo.");
-
     return;
   }
 
-  const savedOrder = localStorage.getItem("foodieOrder");
+  const allOrders = JSON.parse(localStorage.getItem("foodieOrders")) || [];
 
-  if (!savedOrder) {
-    showTrackingError("No active order found.");
-
+  if (allOrders.length === 0) {
+    showTrackingError("No active orders found.");
     return;
   }
 
-  let order;
-
-  try {
-    order = JSON.parse(savedOrder);
-  } catch (error) {
-    showTrackingError("Unable to read order information.");
-
-    return;
-  }
-
-  /*
-       CASE 1:
-       User ne Order ID dala
-    */
+  let matchedOrder = null;
 
   if (enteredOrderId) {
-    if (order.orderId.toUpperCase() === enteredOrderId) {
-      displayTracking(order);
-
+    matchedOrder = allOrders.find(
+      (o) => o.orderId.toUpperCase() === enteredOrderId
+    );
+    if (!matchedOrder) {
+      showTrackingError("Order ID not found.");
       return;
     }
-
-    showTrackingError("Order ID not found.");
-
-    return;
-  }
-
-  /*
-       CASE 2:
-       User ne Table Number dala
-    */
-
-  if (enteredTable) {
-    if (String(order.tableNumber) === String(enteredTable)) {
-      displayTracking(order);
-
+  } else if (enteredTable) {
+    matchedOrder = allOrders.find(
+      (o) => String(o.tableNumber) === String(enteredTable)
+    );
+    if (!matchedOrder) {
+      showTrackingError("No order found for this table.");
       return;
     }
-
-    showTrackingError("No order found for this table.");
-
-    return;
   }
+
+  displayTracking(matchedOrder);
 }
 
 /* =====================================================

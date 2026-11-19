@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arun's Foodie | Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .admin-container {
+        max-width: 1100px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+      .login-box {
+        max-width: 400px;
+        margin: 80px auto;
+        background: #fff;
+        padding: 30px;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        text-align: center;
+      }
+      .login-box input {
+        width: 100%;
+        padding: 12px;
+        margin: 15px 0;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-family: inherit;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+      .stat-card {
+        background: #fff;
+        padding: 20px;
+        border-radius: 14px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      }
+      .stat-card h3 {
+        font-size: 28px;
+        margin-top: 5px;
+        color: #ff5722;
+      }
+      .order-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        border-left: 5px solid #ff5722;
+      }
+      .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+      }
+      .stage-controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 15px;
+      }
+      .stage-btn {
+        padding: 8px 14px;
+        border: 1px solid #ddd;
+        background: #f9f9f9;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .stage-btn.active {
+        background: #ff5722;
+        color: #fff;
+        border-color: #ff5722;
+      }
+      .delete-btn {
+        background: #fee2e2;
+        color: #dc2626;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        margin-left: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="navbar">
+      <a href="index.html" class="logo">🍽️ Foodie Admin</a>
+      <nav>
+        <a href="index.html">Live Website</a>
+        <a href="menu.html">Menu</a>
+        <a href="tracking.html">Track Order</a>
+      </nav>
+      <button id="logoutBtn" class="cart-button" style="display: none; border: none; cursor: pointer;" onclick="logoutAdmin()">
+        Logout
+      </button>
+    </header>
+
+    <!-- LOGIN SECTION -->
+    <div id="adminLogin" class="login-box">
+      <h2>🔐 Admin Login</h2>
+      <p style="color: #666; font-size: 14px; margin-top: 5px;">
+        Managed by Arun Kumar
+      </p>
+      <input type="password" id="adminPass" placeholder="Enter Admin Password" />
+      <button class="place-order-button" onclick="loginAdmin()">
+        Access Dashboard
+      </button>
+    </div>
+
+    <!-- DASHBOARD SECTION -->
+    <main id="adminDashboard" class="admin-container" style="display: none;">
+      <div class="section-heading" style="text-align: left; margin-bottom: 20px;">
+        <p class="section-label">CONTROL PANEL</p>
+        <h1>Live Orders Management</h1>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span>Total Orders</span>
+          <h3 id="statTotalOrders">0</h3>
+        </div>
+        <div class="stat-card">
+          <span>Active Orders</span>
+          <h3 id="statActiveOrders">0</h3>
+        </div>
+        <div class="stat-card">
+          <span>Total Revenue</span>
+          <h3 id="statRevenue">₹0</h3>
+        </div>
+      </div>
+
+      <div id="adminOrdersList"></div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="logo">🍽️ Foodie</div>
+        <p>Developed & Managed by Arun Kumar</p>
+      </div>
+    </footer>
+
+    <script>
+      const ADMIN_PASSWORD = "arun123"; // Yahan apna password set karein
+
+      function checkAuth() {
+        if (sessionStorage.getItem("foodieAdminAuth") === "true") {
+          document.getElementById("adminLogin").style.display = "none";
+          document.getElementById("adminDashboard").style.display = "block";
+          document.getElementById("logoutBtn").style.display = "inline-block";
+          renderAdminOrders();
+        }
+      }
+
+      function loginAdmin() {
+        const input = document.getElementById("adminPass").value;
+        if (input === ADMIN_PASSWORD) {
+          sessionStorage.setItem("foodieAdminAuth", "true");
+          checkAuth();
+        } else {
+          alert("Galat password! Dobara try karein.");
+        }
+      }
+
+      function logoutAdmin() {
+        sessionStorage.removeItem("foodieAdminAuth");
+        location.reload();
+      }
+
+      function updateOrderStage(orderId, newStage) {
+        const stageNames = ["Order Placed", "Preparing", "Ready", "Served"];
+        let orders = JSON.parse(localStorage.getItem("foodieOrders")) || [];
+        
+        orders = orders.map((order) => {
+          if (order.orderId === orderId) {
+            order.stage = newStage;
+            order.status = stageNames[newStage];
+          }
+          return order;
+        });
+
+        localStorage.setItem("foodieOrders", JSON.stringify(orders));
+        renderAdminOrders();
+      }
+
+      function deleteOrder(orderId) {
+        if (!confirm("Kya aap is order ko delete karna chahte hain?")) return;
+        let orders = JSON.parse(localStorage.getItem("foodieOrders")) || [];
+        orders = orders.filter((o) => o.orderId !== orderId);
+        localStorage.setItem("foodieOrders", JSON.stringify(orders));
+        renderAdminOrders();
+      }
+
+      function renderAdminOrders() {
+        const orders = JSON.parse(localStorage.getItem("foodieOrders")) || [];
+        const container = document.getElementById("adminOrdersList");
+
+        // Stats update
+        document.getElementById("statTotalOrders").textContent = orders.length;
+        const activeCount = orders.filter((o) => o.stage < 3).length;
+        document.getElementById("statActiveOrders").textContent = activeCount;
+        const revenue = orders.reduce((sum, o) => sum + Number(o.total), 0);
+        document.getElementById("statRevenue").textContent = `₹${revenue}`;
+
+        if (orders.length === 0) {
+          container.innerHTML = `<div class="order-card"><p>Abhi koi order nahi aaya hai.</p></div>`;
+          return;
+        }
+
+        const stages = ["0: Placed", "1: Preparing", "2: Ready", "3: Served"];
+
+        container.innerHTML = orders
+          .map(
+            (order) => `
+            <div class="order-card">
+              <div class="order-header">
+                <div>
+                  <h3>#${order.orderId} — Table ${order.tableNumber}</h3>
+                  <small>${order.customerName} (${order.customerPhone}) • ${order.createdAt || ""}</small>
+                </div>
+                <strong>Total: ₹${order.total}</strong>
+              </div>
+              <div>
+                ${order.items
+                  .map(
+                    (i) =>
+                      `<span style="display:inline-block; background:#f3f4f6; padding:4px 10px; border-radius:6px; margin:3px; font-size:13px;">${i.emoji} ${i.name} × ${i.quantity}</span>`
+                  )
+                  .join("")}
+              </div>
+              <div class="stage-controls">
+                ${stages
+                  .map(
+                    (label, idx) => `
+                    <button 
+                      class="stage-btn ${Number(order.stage) === idx ? "active" : ""}" 
+                      onclick="updateOrderStage('${order.orderId}', ${idx})"
+                    >
+                      ${label}
+                    </button>`
+                  )
+                  .join("")}
+                <button class="delete-btn" onclick="deleteOrder('${order.orderId}')">Delete</button>
+              </div>
+            </div>
+          `
+          )
+          .join("");
+      }
+
+      document.addEventListener("DOMContentLoaded", checkAuth);
+    </script>
+  </body>
+</html>
